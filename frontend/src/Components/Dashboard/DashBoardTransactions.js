@@ -9,7 +9,7 @@ const DashBoardTransactions = () => {
 
     const navigateTo = useNavigate();
 
-    const { BASE_URL, userDetails, setUser, gettingAuser } = useBankingSystem();
+    const { BASE_URL, userDetails } = useBankingSystem();
 
     const [accno, setAccno] = useState(0);
 
@@ -20,35 +20,27 @@ const DashBoardTransactions = () => {
         setTransactionDetails(details);
     })
 
-    try {
-        if (accno == 0)
-            setAccno(userDetails?.accounts[0]?.accountno);
-    }
-    catch (err) {
-        console.log(err);
-
-    }
-
-    const getAllAccTransactions = async (e) => {
-        // e.preventDefault();
-        while (accno == 0) {
-            console.log("im whilel loop");
-            setAccno(userDetails?.accounts[0]?.accountno);
+    useEffect(() => {
+        if (userDetails?.accounts?.[0]?.accountno) {
+            setAccno(userDetails.accounts[0].accountno);
         }
-        console.log("entry 1");
-        try {
-            console.log("entry 2");
-            const resp = await axios.get(`${BASE_URL}/transactions/bankaccount/${accno}`);
-            console.log("entry 3");
-            console.log(resp);
+    }, [userDetails]);
 
-            console.log("Data fetched Successfully");
+    const getAllAccTransactions = async () => {
+        const currentAccNo = userDetails?.accounts?.[0]?.accountno || accno;
+        if (!currentAccNo) {
+            if (userDetails?.accounts === undefined) {
+                navigateTo("/dashboard");
+            }
+            return;
+        }
+        setAccno(currentAccNo);
+
+        try {
+            const resp = await axios.get(`${BASE_URL}/transactions/bankaccount/${currentAccNo}`);
             setTransaction(resp.data);
 
-            console.log(transactionDetails);
-
             if (resp.status === 200) {
-
                 toast.success("Here Is Your Transactions");
             }
 
@@ -56,16 +48,10 @@ const DashBoardTransactions = () => {
                 toast.success("No Transactions found !");
             }
 
-            if (resp.status !== 200 || resp.status === 401) {
-                toast.error("Invalid Crenditals!")
-            }
-
         } catch (error) {
             console.log(error);
 
             if (userDetails?.accounts === undefined) { navigateTo("/dashboard") }
-
-            // toast.error("Invalid Credentials!")
         }
 
     }

@@ -1,60 +1,45 @@
-import React, { useEffect, useContext, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import NavbarDashboard from './NavbarDashboard'
 import axios from "../Utils/AxiosWithJWT.js"
 import { useBankingSystem } from '../Context/UserContext'
-import { toast } from 'react-hot-toast'
 
 
 const DashBoardBalance = () => {
 
   const navigateTo = useNavigate();
-  const { BASE_URL, userDetails, setUser: setUserDetails, gettingAUser } = useBankingSystem();
+  const { BASE_URL, userDetails, gettingAUser } = useBankingSystem();
   const [balance, setBalance] = useState(0);
-  let accountNo = 0;
-  let userName = null;
-  try {
-    console.log(userDetails?.userId);
-    console.log(userDetails.accounts[0].accountno);
 
-    userName = userDetails.firstname + " " + userDetails.lastname;
-    accountNo = userDetails.accounts[0].accountno;
-    // setBalance(userDetails.accounts[0].balance);
-  }
-  catch
-  { }
+  const accountNo = userDetails?.accounts?.[0]?.accountno || 0;
+  const userName = userDetails
+    ? `${userDetails.firstname || ""} ${userDetails.lastname || ""}`.trim()
+    : "";
 
-
-  
-  const checkbal = async (e) => {
-     gettingAUser();
-    while (accountNo === 0) {
-      console.log("im whilel loop");
-      accountNo = userDetails?.accounts[0]?.accountno;
+  const checkbal = async () => {
+    await gettingAUser();
+    const currentAccountNo = userDetails?.accounts?.[0]?.accountno;
+    if (!currentAccountNo) {
+      navigateTo("/dashboard");
+      return;
     }
 
     try {
-
-      const resp = await axios.get(`${BASE_URL}/account/checkbal/${accountNo}`);
-
+      const resp = await axios.get(`${BASE_URL}/account/checkbal/${currentAccountNo}`);
       setBalance(resp?.data[0]?.balance);
-      console.log(resp);
-    }
-    catch (error) {
+    } catch (error) {
       console.log(error);
-
-      if (userDetails?.accounts === undefined) { navigateTo("/dashboard") }
-
-      // toast.error("Invalid Credentials!")
+      if (userDetails?.accounts === undefined) {
+        navigateTo("/dashboard");
+      }
     }
   }
 
   useEffect(() => {
-    
-      if(!sessionStorage.getItem("jwtToken")){
-        navigateTo("/")
-      }
-    
+    if (!sessionStorage.getItem("jwtToken")) {
+      navigateTo("/")
+      return;
+    }
     checkbal();
   }, []);
 

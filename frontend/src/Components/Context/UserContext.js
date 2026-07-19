@@ -30,15 +30,21 @@ export const UserContextProvider=({children}) =>{
     const gettingAUser = async () =>{
 
         const userid = sessionStorage.getItem("userId");
+        if (!userid) {
+            return;
+        }
 
-        const resp = await axios.get(`${BASE_URL}/api/v1/user/auser`,{
-            params:{
-                userid
-            }
-        })
-        
-        setUser(resp.data);
-        
+        try {
+            const resp = await axios.get(`${BASE_URL}/api/v1/user/auser`,{
+                params:{
+                    userid
+                }
+            })
+            
+            setUser(resp.data);
+        } catch (error) {
+            console.log("Failed to load user:", error);
+        }
 
     }
         useEffect(()=>{

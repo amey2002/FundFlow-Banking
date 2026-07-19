@@ -1,9 +1,13 @@
 package bankproject.onlinebanking.Controllers;
 
 import java.sql.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,66 +20,98 @@ import bankproject.onlinebanking.Model.Role;
 import bankproject.onlinebanking.Model.User;
 import bankproject.onlinebanking.Service.MailService;
 import bankproject.onlinebanking.Service.SignUpService;
-import lombok.AllArgsConstructor;
-import net.bytebuddy.utility.RandomString;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class SignUpController {
 
-    @Autowired
-    private SignUpService signUpService;
+    private final SignUpService signUpService;
+    private final MailService mailService;
 
-    @Autowired
-    private MailService mailService;
+    @Value("${app.mail.enabled:false}")
+    private boolean mailEnabled;
 
-    /*
-     * Accepting Only 4 properties
-     * 
-     * Signup FirstName,Last Name,email,password
-     */
+    private String generateOtp() {
+        return String.format("%06d", new Random().nextInt(1_000_000));
+    }
+
+    private boolean trySendOtpEmail(String email, String otp) {
+        if (!mailEnabled) {
+            System.out.println("Mail disabled — OTP for " + email + ": " + otp);
+            return false;
+        }
+        try {
+            mailService.transactionMail(email, "FundFlow Registration OTP",
+                    "Your FundFlow verification code is: " + otp
+                            + "\n\nVerify here: http://127.0.0.1:3000/signup/otp\n\nThank you.");
+            return true;
+        } catch (Exception e) {
+            System.out.println("Email send failed for " + email + ": " + e.getMessage());
+            System.out.println("Use this OTP instead: " + otp);
+            return false;
+        }
+    }
+
+    private Map<String, Object> otpResponse(User user, boolean emailSent) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("userId", user.getUserId());
+        body.put("email", user.getEmail());
+        body.put("firstname", user.getFirstname());
+        body.put("lastname", user.getLastname());
+        body.put("otp", user.getOtp());
+        body.put("emailSent", emailSent);
+        body.put("message", emailSent
+                ? "OTP sent to your email."
+                : "Email delivery unavailable. Use the OTP shown on screen.");
+        return body;
+    }
 
     @PostMapping("/signup")
-    public ResponseEntity<User> Signup(@RequestBody User user) {
+    public ResponseEntity<?> Signup(@RequestBody User user) {
 
         if (signUpService.findByEmail(user.getEmail()) != null) {
-            return new ResponseEntity<User>(HttpStatus.CONFLICT);
+            return new ResponseEntity<>(Map.of("message", "Email already registered"), HttpStatus.CONFLICT);
         }
 
         String userid = UUID.randomUUID().toString();
-        String otp = RandomString.make(6);
+        String otp = generateOtp();
         user.setUserId(userid);
         user.setOtp(otp);
         user.setRole(Role.USER);
         user.setCreatedDate(new Date(System.currentTimeMillis()));
         User theUser = signUpService.createUser(user);
-        mailService.transactionMail(user.getEmail(), "Registration OTP code",
-                "This is 6 digit otp code: " + otp + "\n\n Click here to verify: http://localhost:3000/signup/otp"
-                        + "\n\nThank you.");
-        return new ResponseEntity<User>(theUser, HttpStatus.OK);
+
+        boolean emailSent = trySendOtpEmail(user.getEmail(), otp);
+        return new ResponseEntity<>(otpResponse(theUser, emailSent), HttpStatus.OK);
     }
 
     @PostMapping("/otp")
     public ResponseEntity<?> checkOTP(@RequestBody User theUser) {
-        if (signUpService.findByOTP(theUser.getOtp()) == null) {
-            return new ResponseEntity<>(HttpStatus.CONFLICT);
+        if (theUser.getOtp() == null || theUser.getOtp().isBlank()) {
+            return new ResponseEntity<>(Map.of("message", "OTP is required"), HttpStatus.BAD_REQUEST);
         }
-        signUpService.updateIsEmailVerified(theUser.getOtp());
-        return new ResponseEntity<>(HttpStatus.OK);
+        if (signUpService.findByOTP(theUser.getOtp().trim()) == null) {
+            return new ResponseEntity<>(Map.of("message", "Invalid OTP"), HttpStatus.CONFLICT);
+        }
+        signUpService.updateIsEmailVerified(theUser.getOtp().trim());
+        return new ResponseEntity<>(Map.of("message", "Email verified successfully"), HttpStatus.OK);
     }
 
     @PostMapping("/resend-otp/{userId}")
     public ResponseEntity<?> resendOTP(@PathVariable String userId) {
 
         User user = signUpService.findById(userId);
-        String otp = RandomString.make(6);
+        if (user == null) {
+            return new ResponseEntity<>(Map.of("message", "User not found"), HttpStatus.NOT_FOUND);
+        }
+        String otp = generateOtp();
         user.setOtp(otp);
         signUpService.save(user);
-        mailService.transactionMail(user.getEmail(), "Registration OTP code",
-                "This is 6 digit otp code: " + otp + "\n\n Click here to verify: http://localhost:3000/signup/otp"
-                        + "\n\nThank you.");
-        return new ResponseEntity<>(HttpStatus.OK);
+
+        boolean emailSent = trySendOtpEmail(user.getEmail(), otp);
+        return new ResponseEntity<>(otpResponse(user, emailSent), HttpStatus.OK);
     }
 
 }

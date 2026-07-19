@@ -13,7 +13,6 @@ import java.util.Map;
 import javax.transaction.Transaction;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -25,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import bankproject.helper.Helper;
@@ -90,7 +90,7 @@ public class AccountController {
     }
 
     @GetMapping("/accounts/mail")
-    public ResponseEntity<?> findAllAccounts(@Param(value = "") String email) {
+    public ResponseEntity<?> findAllAccounts(@RequestParam String email) {
 
         User user = signUpService.findByEmail(email);
         if (user != null)

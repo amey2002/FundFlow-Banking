@@ -32,7 +32,6 @@ const Register = () => {
 
         const handleSubmit = async (e) => {
           e.preventDefault();
-          console.log("++++ test+++++");
 
           const { firstname, lastname, email, password} = userDetails;
 
@@ -44,28 +43,36 @@ const Register = () => {
           }
 
           if (!firstname || !lastname || ! email || !password) {
-             //alert("Please fill all fields");
              toast.error("Please fill all fields");
             return;
           };
 
           if (password.length < 8) {
             toast.error("password should be atleast of 8 characters!");
-           //alert("password should be atleast of 8 characters!");
            return;
           }
+
+          try {
             setIsLoading(true);
             const resp = await axios.post(`${BASE_URL}/api/v1/signup`, data);
-              
-              console.log(resp);
-               sessionStorage.setItem("userId", resp.data.userId);
 
-              if (resp.status === 200) {
-                navigateTo("/signup/otp")
-                toast.success("Registration Successfull,Please Verify Email!");
-                setIsLoading(false);
-          }else{
-            toast.error("Invalid Credentials");
+            sessionStorage.setItem("userId", resp.data.userId);
+            if (resp.data.otp) {
+              sessionStorage.setItem("signupOtp", resp.data.otp);
+            }
+
+            if (resp.status === 200) {
+              if (resp.data.emailSent) {
+                toast.success("Registration successful — check your email for the OTP.");
+              } else {
+                toast.success(`Registration successful. Your OTP is ${resp.data.otp}`);
+              }
+              navigateTo("/signup/otp");
+            }
+          } catch (error) {
+            const message = error?.response?.data?.message || "Registration failed";
+            toast.error(message);
+          } finally {
             setIsLoading(false);
           }
 
