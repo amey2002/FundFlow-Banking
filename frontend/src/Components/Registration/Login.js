@@ -11,7 +11,7 @@ const Login = () => {
       const [password, setPassword] =useState("");
 
       // extracting and using context API hereusing destructuring
-      const {BASE_URL, userDetails, gettingAUser} = useBankingSystem();
+      const {BASE_URL, setUser, gettingAUser} = useBankingSystem();
   
       const TOKEN_EXPIRY_DURATION = 15*60*1000;
      
@@ -42,6 +42,7 @@ const Login = () => {
             // save token in session storage
            sessionStorage.setItem("jwtToken", resp.data.jwtToken);
            sessionStorage.setItem("userId", resp.data.user.userId);
+           setUser(resp.data.user);
 
              gettingAUser();
 

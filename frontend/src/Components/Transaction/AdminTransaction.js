@@ -23,11 +23,6 @@ const AdminTransaction = () => {
 
     const [transactionDetails, setTransactionDetails] = useState();
 
-    if (userDetails?.role != "ADMIN") {
-        navigateTo("/dashboard");
-        return;
-    }
-
     const setTransaction = (details => {
         console.log("Main phir bhi pagal hu!", details)
         setTransactionDetails(details);
