@@ -3,7 +3,8 @@
 **FundFlow** is an online banking management system. Customers can register, open accounts, transfer money, manage beneficiaries, and view statements. Admins can approve account requests, manage accounts, and view transactions.
 
 > **Default admin (local):** `admin@fundflow.com` / `Admin@12345`  
-> Portal: http://127.0.0.1:3000/login → then http://127.0.0.1:3000/admin/dashboard
+> Login: http://127.0.0.1:3000/login → Admin dashboard: http://127.0.0.1:3000/admin/dashboard  
+> Admin pages wait for profile load (no more blank screen). Menu: Requests · Accounts · Transactions
 
 ---
 
